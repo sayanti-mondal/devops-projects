@@ -1,0 +1,81 @@
+To trigger your Jenkins pipeline automatically whenever there is a change in the GitHub repository, follow these steps:
+
+✅ Method 1: Using GitHub Webhooks (Recommended)
+GitHub webhooks notify Jenkins immediately when a commit is pushed.
+
+🔹 Steps to Configure GitHub Webhook
+
+In Jenkins:
+Go to Jenkins Dashboard → Click your Pipeline Job
+Click Configure
+Under Build Triggers, check ✅ "GitHub hook trigger for GITScm polling"
+Save the configuration.
+
+In GitHub:
+Go to your GitHub repository → Settings
+Click Webhooks → Add webhook
+Payload URL: http://YOUR_JENKINS_URL/github-webhook/
+Content Type: application/json
+Select Just the push event
+Click Add Webhook
+
+🔹 Modify Your Jenkinsfile
+Make sure your pipeline checks out code from GitHub:
+
+pipeline {
+    agent any
+    triggers {
+        githubPush()
+    }
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git 'https://github.com/your-username/your-repo.git'
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'echo Building project...'
+            }
+        }
+    }
+}
+Why? 🔥 Fast & Efficient – Jenkins gets notified immediately when a commit is pushed.
+
+✅ Method 2: Using Poll SCM (Less Efficient)
+Instead of GitHub webhooks, Jenkins can periodically check for changes.
+
+🔹 Steps
+Go to Jenkins Dashboard → Click your Pipeline Job
+Click Configure
+Under Build Triggers, check ✅ "Poll SCM"
+In the Schedule field, enter:
+Copy
+Edit
+H/5 * * * *
+This checks for changes every 5 minutes
+Adjust frequency based on your needs
+
+🔹 Modify Your Jenkinsfile
+
+pipeline {
+    agent any
+    triggers {
+        pollSCM('H/5 * * * *')
+    }
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git 'https://github.com/your-username/your-repo.git'
+            }
+        }
+    }
+}
+Why? 🔄 Less efficient – Jenkins keeps polling instead of waiting for GitHub to notify.
+
+Which Method Should You Use?
+Method	Efficiency	Speed
+✅ GitHub Webhooks (Recommended)	🔥 High	🚀 Instant
+✅ SCM Polling	🟡 Medium	⏳ Delayed (polling interval)
+🔹 Use GitHub Webhooks for real-time triggering.
+🔹 Use Poll SCM if webhooks aren’t an option (e.g., firewall restrictions).
