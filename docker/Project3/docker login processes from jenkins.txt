@@ -1,0 +1,102 @@
+1. Use Jenkins Credentials (Recommended)
+Instead of hardcoding credentials, store them in Jenkins securely.
+
+🔹 Steps to Store Credentials in Jenkins
+Go to Jenkins Dashboard → Click Manage Jenkins
+Click Manage Credentials → Select (Global)
+Click Add Credentials
+Kind: Username with password
+Username: (Your Docker Hub username)
+Password: (Your Docker Hub password or access token)
+ID: dockerhub-login (Any unique name)
+Click Save
+
+🔹 Modify Jenkins Pipeline to Use Credentials
+
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_CREDENTIALS = credentials('dockerhub-login')
+    }
+
+    stages {
+        stage('Login to DockerHub') {
+            steps {
+                script {
+                    sh "echo ${DOCKER_CREDENTIALS_PSW} | docker login -u ${DOCKER_CREDENTIALS_USR} --password-stdin"
+                }
+            }
+        }
+    }
+}
+Why? 🔒 This securely fetches credentials without exposing them in the pipeline.
+
+✅ 2. Use Docker Config File (~/.docker/config.json)
+Instead of logging in every time, store Docker credentials in ~/.docker/config.json.
+
+🔹 Steps
+Manually log in once on the Jenkins server:
+docker login --username YOUR_USERNAME --password YOUR_PASSWORD
+This creates a file at ~/.docker/config.json.
+
+Modify Jenkins Pipeline to use this config:
+
+stage('Login to DockerHub') {
+    steps {
+        script {
+            sh "cp ~/.docker/config.json /home/jenkins/.docker/config.json"
+        }
+    }
+}
+Why? 🎯 Avoids repeated docker login commands in pipelines.
+
+✅ 3. Use an Environment Variable (This one I have used in my project)
+Set the Docker username and password as environment variables in Jenkins.
+
+🔹 Steps
+Go to Jenkins Dashboard → Manage Jenkins → Configure System
+Under Global Properties, add:
+DOCKER_USER = your-dockerhub-username
+DOCKER_PASS = your-dockerhub-password
+
+Modify the pipeline:
+
+stage('Login to DockerHub') {
+    steps {
+        script {
+            sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
+        }
+    }
+}
+Why? 🌍 Works across all pipelines but is less secure than Jenkins credentials.
+
+✅ 4. Use Docker Token Instead of Password
+Docker Hub supports personal access tokens (PAT) instead of passwords.
+
+🔹 Steps
+Go to Docker Hub → Account Settings → Security
+Click New Access Token → Copy the generated token.
+Store this as a credential in Jenkins (same as Method 1).
+
+Modify the pipeline:
+
+environment {
+    DOCKER_TOKEN = credentials('dockerhub-token')
+}
+
+stage('Login to DockerHub') {
+    steps {
+        script {
+            sh "echo ${DOCKER_TOKEN} | docker login -u ${DOCKER_USER} --password-stdin"
+        }
+    }
+}
+Why? 🔐 More secure than using a password.
+
+Which Method Should You Use?
+Method	Security	Ease of Use
+✅ Jenkins Credentials (Recommended)	🔒 High	✅ Easy
+✅ Docker Config File (~/.docker/config.json)	🟡 Medium	✅ Easy
+✅ Environment Variables (DOCKER_USER, DOCKER_PASS)	🔴 Low	✅ Easy
+✅ Docker Hub Personal Access Token (PAT)	🔒 High	🟡 Moderate
