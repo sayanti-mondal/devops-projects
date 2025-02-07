@@ -1,0 +1,66 @@
+pipeline {
+    agent any
+    triggers {
+        githubPush()
+    }
+    
+    environment {
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+
+    stages {
+        
+        stage('Checkout'){
+           steps {
+                
+                git branch: 'main',
+                url: 'https://github.com/sayanti-mondal/devops-projects.git'
+                
+           }
+        }
+        
+        stage('Build Docker'){
+            steps{
+                script{
+                    // Change to the directory where the Dockerfile is located.
+                    dir('docker/Project3') {
+                    sh "docker build -t sayanti090/flask-portfolio:${BUILD_NUMBER} ."
+                    }
+                }
+            }
+        }
+        
+        stage('Login to DockerHub') {
+            steps {
+                script {
+                    sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
+                }
+            }
+        }
+        
+        stage('Push the artifacts'){
+           steps{
+                script{
+                    sh "docker push sayanti090/flask-portfolio:${BUILD_NUMBER}"
+                }
+            }
+        }
+        
+        stage('pull and Deploy Docker Container') {
+            steps {
+                script {
+                    
+                    // Stop and remove any existing container named 'jenkins_my_container'
+                     sh '''
+                         if [ "$(docker ps -aq -f name=jenkins_my_container)" ]; then
+                            docker stop jenkins_my_container && docker rm jenkins_my_container
+                         fi
+                      '''
+                    
+                    // Run the container in detached mode with desired port mappings.
+                    sh "docker run -d -p 8081:5000 --name jenkins_my_container sayanti090/flask-portfolio:${BUILD_NUMBER}"
+                }
+            }
+        }
+    }
+}
